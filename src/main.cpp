@@ -1,8 +1,14 @@
 #include <Arduino.h>
+#include <esp32-hal-rgb-led.h>
 #include <Wire.h>
 #include <SPI.h>
+
 #include <esp_display_panel.hpp>
 #include <lvgl.h>
+
+// Add your custom settings here
+#include "settings.h"
+
 #include "sensesp_app.h"
 #include "sensesp_app_builder.h"
 #include "sensesp/signalk/signalk_value_listener.h"
@@ -11,9 +17,9 @@
 using namespace sensesp;
 
 // --- Hardware Pins & Expander ---
-#define I2C_SCL 10
-#define I2C_SDA 11
-#define TCA9554_ADDR 0x20
+//#define I2C_SCL 10
+//#define I2C_SDA 11
+//#define TCA9554_ADDR 0x20
 
 // Global board reference (v1.x style)
 esp_panel::board::Board *board = nullptr;
@@ -55,6 +61,7 @@ static lv_obj_t *wifi_status_label;
 static lv_obj_t *sk_status_label;
 
 // IO Expander Setup
+/*
 void init_io_expander() {
     Wire.begin(I2C_SDA, I2C_SCL, 400000);
     
@@ -78,6 +85,7 @@ void init_io_expander() {
     Wire.endTransmission();
     delay(100);
 }
+    */
 
 // LVGL Display Flush Callback (v1.x style)
 void my_disp_flush(lv_disp_drv_t *disp_drv, const lv_area_t *area, lv_color_t *color_p) {
@@ -123,7 +131,7 @@ void setup() {
     Serial.println("Starting Marine MFD Setup...");
 
     // 1. Hardware Init (I2C IO Expander)
-    init_io_expander();
+    // init_io_expander();
 
     // 2. Display Init (ESP32_Display_Panel v1.x)
     board = new esp_panel::board::Board();
@@ -301,9 +309,12 @@ void setup() {
 
 
     // 5. SensESP App Init
+    // 5. SensESP App Init
     SensESPAppBuilder app_builder;
     auto sensesp_app = (&app_builder)
-                    ->set_hostname("marine-mfd")
+                    ->set_hostname(HOSTNAME)
+                    ->set_wifi(WIFI_SSID, WIFI_PASSWORD)
+                    ->set_sk_server(SK_SERVER_IP, SK_SERVER_PORT)
                     ->get_app();
 
     // 6. Connect listeners to update corresponding LVGL GUI components
@@ -447,6 +458,13 @@ void setup() {
 }
 
 void loop() {
+
+    // Calculate elapsed time
+    static uint32_t last_tick = millis();
+    uint32_t current_tick = millis();
+    lv_tick_inc(current_tick - last_tick); // Inform LVGL of elapsed time
+    last_tick = current_tick;
+
     event_loop()->tick();
     lv_timer_handler(); // Let LVGL do its graphics processing
     delay(5);
