@@ -17,9 +17,9 @@
 using namespace sensesp;
 
 // --- Hardware Pins & Expander ---
-//#define I2C_SCL 10
-//#define I2C_SDA 11
-//#define TCA9554_ADDR 0x20
+// #define I2C_SCL 10
+// #define I2C_SDA 11
+// #define TCA9554_ADDR 0x20
 
 // Global board reference (v1.x style)
 esp_panel::board::Board *board = nullptr;
@@ -30,7 +30,7 @@ static lv_color_t *buf;
 static lv_disp_drv_t disp_drv;
 
 // UI elements
-static lv_obj_t *tv; // Tileview
+static lv_obj_t *tv;    // Tileview
 static lv_obj_t *tile1; // Navigation Tile
 static lv_obj_t *tile2; // Wind Tile
 static lv_obj_t *tile3; // Propulsion Tile
@@ -64,7 +64,7 @@ static lv_obj_t *sk_status_label;
 /*
 void init_io_expander() {
     Wire.begin(I2C_SDA, I2C_SCL, 400000);
-    
+
     // Set P0 (LCD_RST), P1 (TP_RST), and P2 (LCD_BL) as OUTPUT
     Wire.beginTransmission(TCA9554_ADDR);
     Wire.write(0x03); // Config Register
@@ -80,7 +80,7 @@ void init_io_expander() {
 
     // Bring high (enables LCD/Touch reset and Backlight)
     Wire.beginTransmission(TCA9554_ADDR);
-    Wire.write(0x01); 
+    Wire.write(0x01);
     Wire.write(0x07); // P0, P1, P2 High
     Wire.endTransmission();
     delay(100);
@@ -88,7 +88,8 @@ void init_io_expander() {
     */
 
 // LVGL Display Flush Callback (v1.x style)
-void my_disp_flush(lv_disp_drv_t *disp_drv, const lv_area_t *area, lv_color_t *color_p) {
+void my_disp_flush(lv_disp_drv_t *disp_drv, const lv_area_t *area, lv_color_t *color_p)
+{
     auto *b = (esp_panel::board::Board *)disp_drv->user_data;
     uint16_t width = (area->x2 - area->x1) + 1;
     uint16_t height = (area->y2 - area->y1) + 1;
@@ -97,16 +98,19 @@ void my_disp_flush(lv_disp_drv_t *disp_drv, const lv_area_t *area, lv_color_t *c
 }
 
 // SPD2010 Rounder callback (requires coordinates divisible by 4)
-void rounder_cb(lv_disp_drv_t * disp_drv, lv_area_t * area) {
+void rounder_cb(lv_disp_drv_t *disp_drv, lv_area_t *area)
+{
     area->x1 = area->x1 & ~0x3;
     area->x2 = (area->x2 & ~0x3) + 3;
 }
 
 // Touch read callback (v1.x style)
-void my_touch_read(lv_indev_drv_t *indev_drv, lv_indev_data_t *data) {
+void my_touch_read(lv_indev_drv_t *indev_drv, lv_indev_data_t *data)
+{
     auto *b = (esp_panel::board::Board *)indev_drv->user_data;
     auto *tp = b->getTouch();
-    if (!tp) {
+    if (!tp)
+    {
         data->state = LV_INDEV_STATE_RELEASED;
         return;
     }
@@ -114,31 +118,43 @@ void my_touch_read(lv_indev_drv_t *indev_drv, lv_indev_data_t *data) {
     ESP_PanelTouchPoint point;
     int read_touch_result = tp->readPoints(&point, 1);
 
-    if (read_touch_result > 0) {
+    if (read_touch_result > 0)
+    {
         data->point.x = point.x;
         data->point.y = point.y;
         data->state = LV_INDEV_STATE_PRESSED;
-    } else {
+    }
+    else
+    {
         data->state = LV_INDEV_STATE_RELEASED;
     }
 }
 
-void setup() {
+void setup()
+{
     SetupLogging(); // Replaces SetupSerialDebug() in SensESP v3
 
     Serial.begin(115200);
     delay(1000);
     Serial.println("Starting Marine MFD Setup...");
 
+    // Set timezone to Hong Kong Time (UTC+8)
+    setenv("TZ", "HKT-8", 1);
+    tzset();
+    // Configure Hong Kong Time (UTC+8) and trigger NTP time sync via pool.ntp.org
+    configTzTime("HKT-8", "pool.ntp.org", "time.nist.gov");
+
     // 1. Hardware Init (I2C IO Expander)
     // init_io_expander();
 
     // 2. Display Init (ESP32_Display_Panel v1.x)
     board = new esp_panel::board::Board();
-    if (!board->init()) {
+    if (!board->init())
+    {
         Serial.println("Board configuration init failed!");
     }
-    if (!board->begin()) {
+    if (!board->begin())
+    {
         Serial.println("Board hardware startup failed!");
     }
 
@@ -175,7 +191,7 @@ void setup() {
 
     // Page 1: Navigation Tile
     tile1 = lv_tileview_add_tile(tv, 0, 0, LV_DIR_HOR);
-    
+
     // ARC for SOG
     sog_arc = lv_arc_create(tile1);
     lv_obj_set_size(sog_arc, 300, 300);
@@ -185,6 +201,7 @@ void setup() {
     lv_obj_set_style_arc_color(sog_arc, lv_palette_main(LV_PALETTE_BLUE), LV_PART_INDICATOR);
     lv_obj_set_style_arc_width(sog_arc, 15, LV_PART_MAIN);
     lv_obj_set_style_arc_width(sog_arc, 15, LV_PART_INDICATOR);
+    lv_obj_clear_flag(sog_arc, LV_OBJ_FLAG_CLICKABLE);
 
     sog_label = lv_label_create(tile1);
     lv_label_set_text(sog_label, "0.0 KT");
@@ -204,7 +221,6 @@ void setup() {
     lv_obj_set_style_text_color(hdg_label, lv_palette_main(LV_PALETTE_LIGHT_BLUE), LV_PART_MAIN);
     lv_obj_align(hdg_label, LV_ALIGN_TOP_MID, 0, 45);
 
-
     // Page 2: Wind Tile
     tile2 = lv_tileview_add_tile(tv, 1, 0, LV_DIR_HOR);
 
@@ -212,7 +228,7 @@ void setup() {
     lv_obj_set_size(wind_meter, 300, 300);
     lv_obj_center(wind_meter);
     lv_obj_set_style_bg_color(wind_meter, lv_color_black(), LV_PART_MAIN);
-    
+
     lv_meter_scale_t *wind_scale = lv_meter_add_scale(wind_meter);
     lv_meter_set_scale_ticks(wind_meter, wind_scale, 37, 2, 10, lv_color_hex(0x808080));
     lv_meter_set_scale_range(wind_meter, wind_scale, 0, 360, 360, 270); // Full circle, starting top
@@ -231,7 +247,6 @@ void setup() {
     lv_obj_set_style_text_font(wind_title, &lv_font_montserrat_12, LV_PART_MAIN);
     lv_obj_set_style_text_color(wind_title, lv_color_hex(0x808080), LV_PART_MAIN);
     lv_obj_align(wind_title, LV_ALIGN_CENTER, 0, -30);
-
 
     // Page 3: Propulsion Tile
     tile3 = lv_tileview_add_tile(tv, 2, 0, LV_DIR_HOR);
@@ -285,7 +300,6 @@ void setup() {
     lv_obj_set_style_text_color(alt_temp_label, lv_color_white(), LV_PART_MAIN);
     lv_obj_align_to(alt_temp_label, alt_temp_bar, LV_ALIGN_OUT_TOP_MID, 0, -4);
 
-
     // Page 4: System/Status Tile
     tile4 = lv_tileview_add_tile(tv, 3, 0, LV_DIR_HOR);
 
@@ -307,103 +321,88 @@ void setup() {
     lv_obj_set_style_text_color(sk_status_label, lv_palette_main(LV_PALETTE_RED), LV_PART_MAIN);
     lv_obj_align(sk_status_label, LV_ALIGN_BOTTOM_MID, 0, -65);
 
-
-    // 5. SensESP App Init
     // 5. SensESP App Init
     SensESPAppBuilder app_builder;
     auto sensesp_app = (&app_builder)
-                    ->set_hostname(HOSTNAME)
-                    ->set_wifi(WIFI_SSID, WIFI_PASSWORD)
-                    ->set_sk_server(SK_SERVER_IP, SK_SERVER_PORT)
-                    ->get_app();
+                           ->set_hostname(HOSTNAME)
+                           ->set_wifi(WIFI_SSID, WIFI_PASSWORD)
+                           ->set_sk_server(SK_SERVER_IP, SK_SERVER_PORT)
+                           ->get_app();
 
     // 6. Connect listeners to update corresponding LVGL GUI components
-    
+
     // Navigation: SOG (Speed Over Ground)
-    auto* sog_listener = new FloatSKListener("navigation.speedOverGround", 1000, "/SignalK/SOG/Path");
-    auto* ms_to_knots = new Linear(1.94384, 0.0, "/Transforms/SOG_to_Knots");
-    sog_listener->connect_to(ms_to_knots)->connect_to(
-        new LambdaConsumer<float>([](float knots) {
+    auto *sog_listener = new FloatSKListener("navigation.speedOverGround", 1000, "/SignalK/SOG/Path");
+    auto *ms_to_knots = new Linear(1.94384, 0.0, "/Transforms/SOG_to_Knots");
+    sog_listener->connect_to(ms_to_knots)->connect_to(new LambdaConsumer<float>([](float knots)
+                                                                                {
             char val_str[16];
             snprintf(val_str, sizeof(val_str), "%.1f KT", knots);
             lv_label_set_text(sog_label, val_str);
-            lv_arc_set_value(sog_arc, (int16_t)knots);
-        })
-    );
+            lv_arc_set_value(sog_arc, (int16_t)knots); }));
 
     // Navigation: Heading (Magnetic)
-    auto* hdg_listener = new FloatSKListener("navigation.headingMagnetic", 1000, "/SignalK/Heading/Path");
-    auto* rad_to_deg_hdg = new Linear(57.2958, 0.0, "/Transforms/Heading_to_Deg");
-    hdg_listener->connect_to(rad_to_deg_hdg)->connect_to(
-        new LambdaConsumer<float>([](float degrees) {
+    auto *hdg_listener = new FloatSKListener("navigation.headingMagnetic", 1000, "/SignalK/Heading/Path");
+    auto *rad_to_deg_hdg = new Linear(57.2958, 0.0, "/Transforms/Heading_to_Deg");
+    hdg_listener->connect_to(rad_to_deg_hdg)->connect_to(new LambdaConsumer<float>([](float degrees)
+                                                                                   {
             char val_str[16];
             snprintf(val_str, sizeof(val_str), "HDG: %03d°", (int)degrees % 360);
-            lv_label_set_text(hdg_label, val_str);
-        })
-    );
+            lv_label_set_text(hdg_label, val_str); }));
 
     // Wind: Apparent Wind Angle (AWA)
-    auto* awa_listener = new FloatSKListener("environment.wind.angleApparent", 1000, "/SignalK/WindAngle/Path");
-    auto* rad_to_deg_awa = new Linear(57.2958, 0.0, "/Transforms/AWA_to_Deg");
-    awa_listener->connect_to(rad_to_deg_awa)->connect_to(
-        new LambdaConsumer<float>([](float degrees) {
+    auto *awa_listener = new FloatSKListener("environment.wind.angleApparent", 1000, "/SignalK/WindAngle/Path");
+    auto *rad_to_deg_awa = new Linear(57.2958, 0.0, "/Transforms/AWA_to_Deg");
+    awa_listener->connect_to(rad_to_deg_awa)->connect_to(new LambdaConsumer<float>([](float degrees)
+                                                                                   {
             int rounded_deg = (int)degrees % 360;
             if (rounded_deg < 0) rounded_deg += 360;
-            lv_meter_set_indicator_value(wind_meter, wind_needle, rounded_deg);
-        })
-    );
+            lv_meter_set_indicator_value(wind_meter, wind_needle, rounded_deg); }));
 
     // Wind: Apparent Wind Speed (AWS)
-    auto* aws_listener = new FloatSKListener("environment.wind.speedApparent", 1000, "/SignalK/WindSpeed/Path");
-    auto* ms_to_knots_aws = new Linear(1.94384, 0.0, "/Transforms/AWS_to_Knots");
-    aws_listener->connect_to(ms_to_knots_aws)->connect_to(
-        new LambdaConsumer<float>([](float knots) {
+    auto *aws_listener = new FloatSKListener("environment.wind.speedApparent", 1000, "/SignalK/WindSpeed/Path");
+    auto *ms_to_knots_aws = new Linear(1.94384, 0.0, "/Transforms/AWS_to_Knots");
+    aws_listener->connect_to(ms_to_knots_aws)->connect_to(new LambdaConsumer<float>([](float knots)
+                                                                                    {
             char val_str[16];
             snprintf(val_str, sizeof(val_str), "%.1f KT", knots);
-            lv_label_set_text(aws_label, val_str);
-        })
-    );
+            lv_label_set_text(aws_label, val_str); }));
 
     // Propulsion: RPM (Engine Revolutions)
-    auto* rpm_listener = new FloatSKListener("propulsion.engine.revolutions", 1000, "/SignalK/RPM/Path");
-    auto* hz_to_rpm = new Linear(60.0, 0.0, "/Transforms/Hz_to_RPM");
+    auto *rpm_listener = new FloatSKListener("propulsion.engine.revolutions", 1000, "/SignalK/RPM/Path");
+    auto *hz_to_rpm = new Linear(60.0, 0.0, "/Transforms/Hz_to_RPM");
     rpm_listener->connect_to(hz_to_rpm)->connect_to(
-        new LambdaConsumer<float>([](float rpm) {
+        new LambdaConsumer<float>([](float rpm)
+                                  {
             char val_str[16];
             snprintf(val_str, sizeof(val_str), "%d RPM", (int)rpm);
             lv_label_set_text(rpm_label, val_str);
-            lv_meter_set_indicator_value(rpm_meter, rpm_needle, (int)rpm);
-        })
-    );
+            lv_meter_set_indicator_value(rpm_meter, rpm_needle, (int)rpm); }));
 
     // Propulsion: Engine Temp
-    auto* eng_temp_listener = new FloatSKListener("propulsion.engine.temperature", 1000, "/SignalK/EngineTemp/Path");
-    auto* k_to_c_eng = new Linear(1.0, -273.15, "/Transforms/K_to_C_Engine");
-    eng_temp_listener->connect_to(k_to_c_eng)->connect_to(
-        new LambdaConsumer<float>([](float celsius) {
+    auto *eng_temp_listener = new FloatSKListener("propulsion.engine.temperature", 1000, "/SignalK/EngineTemp/Path");
+    auto *k_to_c_eng = new Linear(1.0, -273.15, "/Transforms/K_to_C_Engine");
+    eng_temp_listener->connect_to(k_to_c_eng)->connect_to(new LambdaConsumer<float>([](float celsius)
+                                                                                    {
             char val_str[16];
             snprintf(val_str, sizeof(val_str), "ENG: %.0f°C", celsius);
             lv_label_set_text(eng_temp_label, val_str);
-            lv_bar_set_value(eng_temp_bar, (int16_t)celsius, LV_ANIM_OFF);
-        })
-    );
+            lv_bar_set_value(eng_temp_bar, (int16_t)celsius, LV_ANIM_OFF); }));
 
     // Propulsion: Alternator Temp
-    auto* alt_temp_listener = new FloatSKListener("electrical.alternators.alternator.temperature", 1000, "/SignalK/AltTemp/Path");
-    auto* k_to_c_alt = new Linear(1.0, -273.15, "/Transforms/K_to_C_Alt");
-    alt_temp_listener->connect_to(k_to_c_alt)->connect_to(
-        new LambdaConsumer<float>([](float celsius) {
+    auto *alt_temp_listener = new FloatSKListener("electrical.alternators.alternator.temperature", 1000, "/SignalK/AltTemp/Path");
+    auto *k_to_c_alt = new Linear(1.0, -273.15, "/Transforms/K_to_C_Alt");
+    alt_temp_listener->connect_to(k_to_c_alt)->connect_to(new LambdaConsumer<float>([](float celsius)
+                                                                                    {
             char val_str[16];
             snprintf(val_str, sizeof(val_str), "ALT: %.0f°C", celsius);
             lv_label_set_text(alt_temp_label, val_str);
-            lv_bar_set_value(alt_temp_bar, (int16_t)celsius, LV_ANIM_OFF);
-        })
-    );
-
+            lv_bar_set_value(alt_temp_bar, (int16_t)celsius, LV_ANIM_OFF); }));
 
     // 7. Subscribe to general network state changes (WiFi state)
     sensesp_app->get_network_state_producer()->connect_to(
-        new LambdaConsumer<NetworkState>([](NetworkState state) {
+        new LambdaConsumer<NetworkState>([](NetworkState state)
+                                         {
             if (state == kNetworkNoConnection) {
                 lv_label_set_text(wifi_status_label, "WiFi: Unconfigured");
                 lv_obj_set_style_text_color(wifi_status_label, lv_palette_main(LV_PALETTE_GREY), LV_PART_MAIN);
@@ -422,21 +421,32 @@ void setup() {
             } else {
                 lv_label_set_text(wifi_status_label, "WiFi: Unknown");
                 lv_obj_set_style_text_color(wifi_status_label, lv_palette_main(LV_PALETTE_GREY), LV_PART_MAIN);
-            }
-        })
-    );
-
+            } }));
 
     // 8. Register periodic ReactESP timer to update Digital Clock & Signal K WS Connection Status
-    event_loop()->onRepeat(1000, []() {
+    event_loop()->onRepeat(1000, []()
+                           {
         // Update Digital Clock (NTP or ESP32 local clock)
         time_t raw_time = time(nullptr);
         struct tm time_info;
         localtime_r(&raw_time, &time_info);
         
+        // Checks if NTP time has successfully synced (tm_year will be >= 120 for 2020+)
+    if (time_info.tm_year < 120) { 
+        lv_label_set_text(clock_label, "Syncing...");
+    } else {
+        char clock_str[16];
+        snprintf(clock_str, sizeof(clock_str), "%02d:%02d:%02d", 
+                 time_info.tm_hour, time_info.tm_min, time_info.tm_sec);
+        lv_label_set_text(clock_label, clock_str);
+    }
+
         char clock_str[16];
         snprintf(clock_str, sizeof(clock_str), "%02d:%02d:%02d", time_info.tm_hour, time_info.tm_min, time_info.tm_sec);
         lv_label_set_text(clock_label, clock_str);
+
+
+
 
         // Update Signal K WS Client status
         bool sk_connected = false;
@@ -451,13 +461,13 @@ void setup() {
         } else {
             lv_label_set_text(sk_status_label, "Signal K: Offline");
             lv_obj_set_style_text_color(sk_status_label, lv_palette_main(LV_PALETTE_RED), LV_PART_MAIN);
-        }
-    });
+        } });
 
     Serial.println("Marine MFD initialized successfully!");
 }
 
-void loop() {
+void loop()
+{
 
     // Calculate elapsed time
     static uint32_t last_tick = millis();
