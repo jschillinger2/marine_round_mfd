@@ -219,7 +219,7 @@ void setup()
     lv_label_set_text(hdg_label, "HDG: ---°");
     lv_obj_set_style_text_font(hdg_label, &lv_font_montserrat_22, LV_PART_MAIN);
     lv_obj_set_style_text_color(hdg_label, lv_palette_main(LV_PALETTE_LIGHT_BLUE), LV_PART_MAIN);
-    lv_obj_align(hdg_label, LV_ALIGN_TOP_MID, 0, 45);
+    lv_obj_align(hdg_label, LV_ALIGN_TOP_MID, 0, 110);
 
     // Page 2: Wind Tile
     tile2 = lv_tileview_add_tile(tv, 1, 0, LV_DIR_HOR);
